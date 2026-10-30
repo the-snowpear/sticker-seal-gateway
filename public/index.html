@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>贴纸封印 · Sticker Seal</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='4'/%3E%3Cpath d='M7.5 12.5l3 3 6-6'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+  <body>
+    <div id="auth-gate" class="auth-gate" hidden>
+      <div class="auth-card">
+        <div class="auth-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="28" height="28">
+            <rect x="3" y="3" width="18" height="18" rx="4" /><path d="M7.5 12.5l3 3 6-6" />
+          </svg>
+        </div>
+        <h1>贴纸封印网关</h1>
+        <p id="auth-reason">需要以管理员身份打开。请从 sub2api 侧栏的「贴纸封印」进入。</p>
+        <button id="btn-demo" class="btn btn-ghost" type="button">用上次的令牌重试</button>
+      </div>
+    </div>
+
+    <div id="app" hidden>
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20">
+              <rect x="3" y="3" width="18" height="18" rx="4" /><path d="M7.5 12.5l3 3 6-6" />
+            </svg>
+          </span>
+          <div>
+            <h1>贴纸封印网关</h1>
+            <p id="brand-sub">sticker-seal-gateway</p>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <span id="pill-version" class="pill pill-muted">v—</span>
+          <button id="btn-refresh" class="btn btn-ghost" type="button" title="刷新">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" />
+            </svg>
+            刷新
+          </button>
+        </div>
+      </header>
+
+      <nav class="tabs" id="tabs">
+        <button class="tab is-active" data-tab="overview" type="button">概览</button>
+        <button class="tab" data-tab="stickers" type="button">贴纸</button>
+        <button class="tab" data-tab="attach" type="button">接入</button>
+        <button class="tab" data-tab="preview" type="button">预览与测试</button>
+        <button class="tab" data-tab="events" type="button">事件</button>
+      </nav>
+
+      <main>
+        <!-- ═══ 概览 ═══ -->
+        <section class="panel is-active" data-panel="overview">
+          <div class="stats-row" id="overview-stats"></div>
+          <div class="cards" id="upstream-cards"></div>
+          <div class="notice" id="overview-notice" hidden></div>
+        </section>
+
+        <!-- ═══ 贴纸 ═══ -->
+        <section class="panel" data-panel="stickers">
+          <div class="panel-head">
+            <div>
+              <h2>贴纸正文</h2>
+              <p>A 拼在 system 槽最前，B 拼在 system 槽最后，客户端原文夹在中间。</p>
+            </div>
+            <div class="panel-actions">
+              <button id="btn-save-stickers" class="btn btn-primary" type="button">保存</button>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <div class="field-head">
+                <label for="sticker-prefix">贴纸 A · 前缀</label>
+                <span class="mono-count" id="count-prefix">—</span>
+              </div>
+              <textarea id="sticker-prefix" spellcheck="false" rows="18"></textarea>
+            </div>
+            <div class="field">
+              <div class="field-head">
+                <label for="sticker-suffix">贴纸 B · 后缀</label>
+                <span class="mono-count" id="count-suffix">—</span>
+              </div>
+              <textarea id="sticker-suffix" spellcheck="false" rows="18"></textarea>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <label class="switch">
+              <input type="checkbox" id="dedupe" />
+              <span>去重：system 里已经带贴纸时跳过 </span>
+            </label>
+            <label class="inline-field">
+              请求体上限
+              <input type="number" id="max-body" min="1024" step="1024" />
+              <span class="unit">bytes</span>
+            </label>
+          </div>
+          <p class="hint" id="token-hint">—</p>
+        </section>
+
+        <!-- ═══ 接入 ═══ -->
+        <section class="panel" data-panel="attach">
+          <div class="panel-head">
+            <div>
+              <h2>账号接入</h2>
+              <p>把 sub2api 账号的 base_url 指到本网关。断开后回到原值。改动走 sub2api 管理接口，凭据一个字节都不动。</p>
+            </div>
+            <div class="panel-actions">
+              <button id="btn-load-accounts" class="btn btn-ghost" type="button">重新拉取</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="attach-table">
+              <thead>
+                <tr>
+                  <th>ID</th><th>名称</th><th>平台 / 类型</th><th>当前 base_url</th><th>目标网关</th><th>状态</th><th class="ta-right">操作</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="7" class="empty">载入中…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ═══ 预览与测试 ═══ -->
+        <section class="panel" data-panel="preview">
+          <div class="panel-head">
+            <div>
+              <h2>注入预览与实弹</h2>
+              <p>左边是你发的，右边是上游实际收到的。实弹按钮会把注入后的请求真打给上游。</p>
+            </div>
+          </div>
+
+          <div class="preview-controls">
+            <label class="inline-field">
+              上游
+              <select id="preview-upstream"></select>
+            </label>
+            <label class="inline-field grow">
+              路径
+              <input type="text" id="preview-path" value="/v1/chat/completions" spellcheck="false" />
+            </label>
+            <button id="btn-preview" class="btn btn-primary" type="button">注入预览</button>
+            <button id="btn-live" class="btn btn-danger" type="button">发一发</button>
+            <button id="btn-sample" class="btn btn-ghost" type="button">示例</button>
+          </div>
+
+          <div class="grid-2 tall">
+            <div class="field">
+              <div class="field-head"><label for="preview-input">请求体</label><span id="preview-badge" class="badge"></span></div>
+              <textarea id="preview-input" spellcheck="false" rows="16"></textarea>
+            </div>
+            <div class="field">
+              <div class="field-head"><label>注入后</label><span id="preview-out-badge" class="badge"></span></div>
+              <pre id="preview-output" class="code-pane">（点「注入预览」）</pre>
+            </div>
+          </div>
+
+          <div class="field" id="live-wrap" hidden>
+            <div class="field-head"><label>上游原始响应</label><span id="live-badge" class="badge"></span></div>
+            <pre id="live-output" class="code-pane"></pre>
+          </div>
+        </section>
+
+        <!-- ═══ 事件 ═══ -->
+        <section class="panel" data-panel="events">
+          <div class="panel-head">
+            <div>
+              <h2>最近事件</h2>
+              <p>每一发经过网关的请求都在这里，含跳过的原因。</p>
+            </div>
+            <div class="panel-actions">
+              <label class="switch"><input type="checkbox" id="events-live" checked /><span>每 5 秒自动刷新</span></label>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="events-table">
+              <thead>
+                <tr><th>时间</th><th>上游</th><th>方法 / 路径</th><th>模型</th><th>命中</th><th>原因</th><th class="ta-right">字节</th><th class="ta-right">上游</th><th class="ta-right">耗时</th></tr>
+              </thead>
+              <tbody><tr><td colspan="9" class="empty">载入中…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      <div id="toast" class="toast" hidden></div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

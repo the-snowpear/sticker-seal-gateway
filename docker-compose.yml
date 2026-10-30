@@ -1,0 +1,43 @@
+# sticker-seal-gateway
+#
+# Sits between sub2api and its upstream converters. Only the admin port is
+# published; the proxy ports (9000-9100) are reached by container name from
+# sub2api over the shared docker network, so adding an upstream needs no
+# compose edit and no host port.
+
+services:
+  sticker-seal:
+    build: .
+    image: sticker-seal-gateway:1.0.0
+    container_name: sticker-seal
+    restart: unless-stopped
+    user: "1000:1000"
+    environment:
+      - TZ=Asia/Shanghai
+      - DATA_DIR=/app/data
+      - ADMIN_PORT=6030
+      - PUBLIC_HOST=sticker-seal
+      - SUB2API_BASE=http://sub2api:8080
+      - SUB2API_JWT_SECRET=${SUB2API_JWT_SECRET:?set SUB2API_JWT_SECRET to the sub2api JWT_SECRET}
+      - LOG_LEVEL=info
+    ports:
+      # Admin GUI only. The proxy listeners stay inside the docker network.
+      - "127.0.0.1:6030:6030"
+    volumes:
+      - ./data:/app/data
+    networks:
+      - sub2api-network
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+networks:
+  sub2api-network:
+    external: true
+    name: sub2api-deploy_sub2api-network

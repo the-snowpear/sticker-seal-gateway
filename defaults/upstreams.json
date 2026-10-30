@@ -1,0 +1,32 @@
+[
+  {
+    "id": "wb",
+    "name": "WorkBuddy 网关",
+    "listen": 9001,
+    "target": "http://wb-proxy:8788",
+    "enabled": true,
+    "model_allow": [],
+    "account_id": 31,
+    "previous_base_url": "http://wb-proxy:8788"
+  },
+  {
+    "id": "cc",
+    "name": "commandcode",
+    "listen": 9002,
+    "target": "http://cmdcode2api:11434",
+    "enabled": true,
+    "model_allow": [],
+    "account_id": 29,
+    "previous_base_url": "http://cmdcode2api:11434"
+  },
+  {
+    "id": "cc-baiye",
+    "name": "baiye",
+    "listen": 9003,
+    "target": "http://cmdcode2api:11434",
+    "enabled": true,
+    "model_allow": [],
+    "account_id": 30,
+    "previous_base_url": "http://cmdcode2api:11434"
+  }
+]

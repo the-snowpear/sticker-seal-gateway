@@ -1,0 +1,23 @@
+{
+  "name": "sticker-seal-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Transparent LLM gateway that seals the system slot of OpenAI-shaped requests between sub2api and its upstream converters.",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js",
+    "test:watch": "node --test --watch test/*.test.js"
+  },
+  "keywords": [
+    "sub2api",
+    "llm-gateway",
+    "reverse-proxy",
+    "system-prompt"
+  ],
+  "license": "MIT"
+}
