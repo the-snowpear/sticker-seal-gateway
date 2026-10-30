@@ -23,8 +23,8 @@ const HOP_BY_HOP = new Set([
   'upgrade',
 ]);
 
-const CONNECT_TIMEOUT_MS = 10_000;
-const RESPONSE_TIMEOUT_MS = 600_000;
+const CONNECT_TIMEOUT_MS = Number(process.env.SEAL_CONNECT_TIMEOUT_MS ?? 10_000);
+const RESPONSE_TIMEOUT_MS = Number(process.env.SEAL_RESPONSE_TIMEOUT_MS ?? 600_000);
 const TEST_BODY_LIMIT = 256 * 1024;
 
 function forwardableHeaders(headers) {
@@ -186,9 +186,29 @@ export function createHandler(upstream) {
       },
     );
 
-    proxyReq.setTimeout(CONNECT_TIMEOUT_MS, () => {
-      proxyReq.destroy(new Error('upstream connect timeout'));
+    // Node's request.setTimeout() is a *socket inactivity* timer, not a connect
+    // timer. A non-streaming upstream sends nothing at all until the whole
+    // completion is ready, so a reasoning model that thinks for 15 s looks
+    // exactly like a dead upstream and gets its socket destroyed mid-request.
+    // Arm the connect timeout on the socket's own `connect` event instead, and
+    // give the wait-for-headers phase the long budget.
+    proxyReq.on('socket', (socket) => {
+      if (!socket.connecting) return;
+      const timer = setTimeout(() => {
+        proxyReq.destroy(new Error('upstream connect timeout'));
+      }, CONNECT_TIMEOUT_MS);
+      timer.unref?.();
+      socket.once('connect', () => clearTimeout(timer));
+      socket.once('close', () => clearTimeout(timer));
     });
+
+    const headersTimer = setTimeout(() => {
+      proxyReq.destroy(new Error('upstream response timeout'));
+    }, RESPONSE_TIMEOUT_MS);
+    headersTimer.unref?.();
+    proxyReq.on('response', () => clearTimeout(headersTimer));
+    proxyReq.on('error', () => clearTimeout(headersTimer));
+    proxyReq.on('close', () => clearTimeout(headersTimer));
 
     proxyReq.on('error', (error) => {
       event.error = error.message;
